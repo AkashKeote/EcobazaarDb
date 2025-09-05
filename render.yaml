@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ecobazaardb
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: MYSQL_ROOT_PASSWORD
+        value: rootpassword
+      - key: MYSQL_DATABASE
+        value: ecobazaar_db
+      - key: MYSQL_USER
+        value: ecobazaar_user
+      - key: MYSQL_PASSWORD
+        value: ecobazaar_password
+    healthCheckPath: /health
+    port: 3306
