@@ -16,6 +16,14 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Initialize MySQL data directory
+RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql
+
+# Create MySQL directories and set permissions
+RUN mkdir -p /var/run/mysqld && \
+    chown -R mysql:mysql /var/run/mysqld && \
+    chown -R mysql:mysql /var/lib/mysql
+
 # Enable Apache modules
 RUN a2enmod rewrite
 
@@ -37,18 +45,21 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 echo "Starting MySQL..."\n\
-service mysql start\n\
+# Start MySQL using mysqld directly\n\
+mysqld --user=mysql --datadir=/var/lib/mysql --pid-file=/var/run/mysqld/mysqld.pid --socket=/var/run/mysqld/mysqld.sock --port=3306 &\n\
+MYSQL_PID=$!\n\
 \n\
 # Wait for MySQL to be ready\n\
 echo "Waiting for MySQL to be ready..."\n\
-while ! mysqladmin ping -h localhost -u root -prootpassword --silent 2>/dev/null; do\n\
+while ! mysqladmin ping -h localhost -u root --silent 2>/dev/null; do\n\
   echo "MySQL not ready yet, waiting..."\n\
   sleep 2\n\
 done\n\
 \n\
 echo "MySQL is ready!"\n\
 \n\
-# Initialize database if not exists\n\
+# Set root password and initialize database\n\
+mysql -u root -e "ALTER USER '\''root'\''@'\''localhost'\'' IDENTIFIED BY '\''rootpassword'\'';"\n\
 mysql -u root -prootpassword -e "CREATE DATABASE IF NOT EXISTS ecobazaar_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"\n\
 mysql -u root -prootpassword -e "CREATE USER IF NOT EXISTS '\''ecobazaar_user'\''@'\''localhost'\'' IDENTIFIED BY '\''ecobazaar_password'\'';"\n\
 mysql -u root -prootpassword -e "GRANT ALL PRIVILEGES ON ecobazaar_db.* TO '\''ecobazaar_user'\''@'\''localhost'\'';"\n\
