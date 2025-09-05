@@ -16,11 +16,9 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Initialize MySQL data directory
-RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql
-
 # Create MySQL directories and set permissions
 RUN mkdir -p /var/run/mysqld && \
+    mkdir -p /var/lib/mysql && \
     chown -R mysql:mysql /var/run/mysqld && \
     chown -R mysql:mysql /var/lib/mysql
 
@@ -45,6 +43,12 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 echo "Starting MySQL..."\n\
+# Initialize MySQL data directory if not exists\n\
+if [ ! -d "/var/lib/mysql/mysql" ]; then\n\
+  echo "Initializing MySQL data directory..."\n\
+  mysql_install_db --user=mysql --datadir=/var/lib/mysql\n\
+fi\n\
+\n\
 # Start MySQL using mysqld directly\n\
 mysqld --user=mysql --datadir=/var/lib/mysql --pid-file=/var/run/mysqld/mysqld.pid --socket=/var/run/mysqld/mysqld.sock --port=3306 &\n\
 MYSQL_PID=$!\n\
