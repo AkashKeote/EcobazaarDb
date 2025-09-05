@@ -34,29 +34,8 @@ RUN chmod 644 /var/www/html/index.php
 # Expose port 80 (Apache)
 EXPOSE 80
 
-# Create startup script
-RUN cat > /start.sh << 'EOF'
-#!/bin/bash
-set -e
-
-echo "Starting MySQL..."
-# Start MySQL in background using the official entrypoint
-/docker-entrypoint.sh mysqld &
-
-# Wait for MySQL to be ready
-echo "Waiting for MySQL to be ready..."
-while ! mysqladmin ping -h localhost -u root -prootpassword --silent; do
-  echo "MySQL not ready yet, waiting..."
-  sleep 2
-done
-
-echo "MySQL is ready!"
-
-# Start Apache
-echo "Starting Apache..."
-httpd -D FOREGROUND
-EOF
-
+# Copy startup script
+COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
 # Health check for the API
