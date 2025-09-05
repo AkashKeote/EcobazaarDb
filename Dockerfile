@@ -1,5 +1,5 @@
 # Dockerfile for EcoBazaar Database API Service
-FROM mysql:8.0
+FROM php:8.0-apache
 
 # Set environment variables for MySQL
 ENV MYSQL_ROOT_PASSWORD=rootpassword
@@ -7,40 +7,30 @@ ENV MYSQL_DATABASE=ecobazaar_db
 ENV MYSQL_USER=ecobazaar_user
 ENV MYSQL_PASSWORD=ecobazaar_password
 
-# Install PHP, Apache, and curl (MySQL image uses microdnf)
-RUN microdnf update -y && \
-    microdnf install -y \
-    httpd \
-    php \
-    php-mysqlnd \
-    php-pdo \
+# Install MySQL client and other dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    default-mysql-client \
     curl \
-    && microdnf clean all
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy initialization script
-COPY init.sql /docker-entrypoint-initdb.d/
-
-# Configure Apache (httpd on RHEL/CentOS)
-RUN echo 'ServerName localhost' >> /etc/httpd/conf/httpd.conf
-RUN echo 'LoadModule rewrite_module modules/mod_rewrite.so' >> /etc/httpd/conf/httpd.conf
+# Enable Apache modules
+RUN a2enmod rewrite
 
 # Copy PHP application
 COPY index.php /var/www/html/
 
 # Set proper permissions
-RUN chown -R apache:apache /var/www/html/
+RUN chown -R www-data:www-data /var/www/html/
 RUN chmod 644 /var/www/html/index.php
 
 # Expose port 80 (Apache)
 EXPOSE 80
 
-# Copy startup script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
-
 # Health check for the API
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost/health || exit 1
 
-# Start both services
-CMD ["/start.sh"]
+# Start Apache
+CMD ["apache2-foreground"]
