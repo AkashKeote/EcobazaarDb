@@ -7,29 +7,33 @@ ENV MYSQL_DATABASE=ecobazaar_db
 ENV MYSQL_USER=ecobazaar_user
 ENV MYSQL_PASSWORD=ecobazaar_password
 
-# Install Node.js and curl
+# Install PHP, Apache, and curl
 RUN apt-get update && \
-    apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y \
+    apache2 \
+    php \
+    php-mysql \
+    php-pdo \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy initialization script
 COPY init.sql /docker-entrypoint-initdb.d/
 
-# Set working directory for API
-WORKDIR /app
+# Configure Apache
+RUN a2enmod rewrite
+RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf
 
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm ci --only=production
+# Copy PHP application
+COPY index.php /var/www/html/
 
-# Copy API server
-COPY server.js ./
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html/
+RUN chmod 644 /var/www/html/index.php
 
-# Expose API port (Render will use this)
-EXPOSE 3000
+# Expose port 80 (Apache)
+EXPOSE 80
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
@@ -48,13 +52,13 @@ done\n\
 \n\
 echo "MySQL is ready!"\n\
 \n\
-# Start the API server\n\
-echo "Starting API server..."\n\
-exec node server.js' > /start.sh && chmod +x /start.sh
+# Start Apache\n\
+echo "Starting Apache..."\n\
+apache2ctl -D FOREGROUND' > /start.sh && chmod +x /start.sh
 
 # Health check for the API
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost/health || exit 1
 
 # Start both services
 CMD ["/start.sh"]
