@@ -7,29 +7,28 @@ ENV MYSQL_DATABASE=ecobazaar_db
 ENV MYSQL_USER=ecobazaar_user
 ENV MYSQL_PASSWORD=ecobazaar_password
 
-# Install PHP, Apache, and curl
-RUN apt-get update && \
-    apt-get install -y \
-    apache2 \
+# Install PHP, Apache, and curl (MySQL image uses microdnf)
+RUN microdnf update -y && \
+    microdnf install -y \
+    httpd \
     php \
-    php-mysql \
+    php-mysqlnd \
     php-pdo \
     curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && microdnf clean all
 
 # Copy initialization script
 COPY init.sql /docker-entrypoint-initdb.d/
 
-# Configure Apache
-RUN a2enmod rewrite
-RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf
+# Configure Apache (httpd on RHEL/CentOS)
+RUN echo 'ServerName localhost' >> /etc/httpd/conf/httpd.conf
+RUN echo 'LoadModule rewrite_module modules/mod_rewrite.so' >> /etc/httpd/conf/httpd.conf
 
 # Copy PHP application
 COPY index.php /var/www/html/
 
 # Set proper permissions
-RUN chown -R www-data:www-data /var/www/html/
+RUN chown -R apache:apache /var/www/html/
 RUN chmod 644 /var/www/html/index.php
 
 # Expose port 80 (Apache)
@@ -54,7 +53,7 @@ echo "MySQL is ready!"\n\
 \n\
 # Start Apache\n\
 echo "Starting Apache..."\n\
-apache2ctl -D FOREGROUND' > /start.sh && chmod +x /start.sh
+httpd -D FOREGROUND' > /start.sh && chmod +x /start.sh
 
 # Health check for the API
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
