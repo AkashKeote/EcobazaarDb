@@ -59,14 +59,12 @@ function handleHealthCheck() {
             'service' => 'EcoBazaar Database API'
         ]);
     } catch (PDOException $e) {
-        // If database is not available, still return healthy status for web service
-        http_response_code(200);
+        http_response_code(500);
         echo json_encode([
-            'status' => 'healthy',
-            'database' => 'not_configured',
-            'message' => 'Web service is running. Database connection not configured.',
-            'timestamp' => date('c'),
-            'service' => 'EcoBazaar Database API'
+            'status' => 'unhealthy',
+            'database' => 'disconnected',
+            'error' => $e->getMessage(),
+            'timestamp' => date('c')
         ]);
     }
 }
