@@ -13,5 +13,8 @@ services:
         value: ecobazaar_user
       - key: MYSQL_PASSWORD
         value: ecobazaar_password
+      - key: DB_HOST
+        value: localhost
+      - key: DB_PORT
+        value: 3306
     healthCheckPath: /health
-    port: 3306
